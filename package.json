@@ -1,0 +1,30 @@
+{
+  "name": "most-marbles",
+  "version": "0.0.0",
+  "description": "Marble testing for most.js. Inspired by https://github.com/thomas-jeepe/most-marble",
+  "main": "dist/index.js",
+  "author": "devexperts",
+  "license": "MPL-2",
+  "private": true,
+  "scripts": {
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "@most/core": "^1.5.0",
+    "@most/disposable": "^1.2.2",
+    "@most/scheduler": "^1.2.3",
+    "@most/types": "^1.0.2",
+    "@types/jest": "^24.0.15",
+    "fp-ts": "^2.0.0",
+    "prettier": "^1.18.2",
+    "typescript": "^3.5.2"
+  },
+  "devDependencies": {
+    "jest": "^24.8.0",
+    "ts-jest": "^24.0.2"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node"
+  }
+}
