@@ -21,7 +21,7 @@ class Matchers<A, R> {
 
 	toBeSubscribed(expectedStreamMarbles: string): Promise<void> {
 		const sinkEvents = parseSink(this.sinkMarbles);
-		const expectedStreamEvents = parseStream(expectedStreamMarbles);
+		const expectedStreamEvents = parseStream(expectedStreamMarbles, {});
 		return new Promise((resolve, reject) =>
 			pipe(
 				seqeunceTEither(sinkEvents, expectedStreamEvents),
@@ -44,9 +44,9 @@ class Envorinment<R> {
 
 	constructor(private readonly equals: (a: unknown, b: unknown) => R) {}
 
-	stream(marbles: string): Either<Error, Stream<string>> {
+	stream<A>(marbles: string, values: Record<string, A>): Either<Error, Stream<A>> {
 		return pipe(
-			parseStream(marbles),
+			parseStream(marbles, {}),
 			map(newMarblesStreamSource),
 		);
 	}

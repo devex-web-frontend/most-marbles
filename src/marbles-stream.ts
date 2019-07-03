@@ -6,16 +6,18 @@ import { Either, left, map, right } from 'fp-ts/lib/Either';
 import { snoc } from 'fp-ts/lib/Array';
 import { pipe } from 'fp-ts/lib/pipeable';
 import { end, failure, next, Event } from './event';
+import { lookup } from 'fp-ts/lib/Record';
+import { getOrElse } from 'fp-ts/lib/Option';
 
-class MarblesStreamSource implements Stream<string> {
-	constructor(private readonly events: Event<string>[]) {}
+class MarblesStreamSource<A> implements Stream<A> {
+	constructor(private readonly events: Event<A>[]) {}
 
-	run(sink: Sink<string>, scheduler: Scheduler): Disposable {
+	run(sink: Sink<A>, scheduler: Scheduler): Disposable {
 		return disposeAll(this.events.map(event => delay(event.time, propagateTask(runEvent, event, sink), scheduler)));
 	}
 }
 
-const runEvent = (time: Time, event: Event<string>, sink: Sink<string>): void => {
+const runEvent = <A>(time: Time, event: Event<A>, sink: Sink<A>): void => {
 	switch (event._tag) {
 		case 'End': {
 			return sink.end(time);
@@ -29,7 +31,8 @@ const runEvent = (time: Time, event: Event<string>, sink: Sink<string>): void =>
 	}
 };
 
-export const newMarblesStreamSource = (events: Event<string>[]): MarblesStreamSource => new MarblesStreamSource(events);
+export const newMarblesStreamSource = <A>(events: Event<A>[]): MarblesStreamSource<A> =>
+	new MarblesStreamSource(events);
 
 const stream = /^([- a-z0-9]|\([ a-z0-9]+\))*[|#] *$/i;
 const validateStream = (marbles: string): Either<Error, string[]> => {
@@ -39,11 +42,11 @@ const validateStream = (marbles: string): Either<Error, string[]> => {
 	return right(marbles.split(''));
 };
 
-const toEvents = (marbles: string[]): Event<string>[] => {
+const toEvents = <A>(values: Record<string, A>) => (marbles: string[]): Event<A | string>[] => {
 	let frame = 0;
 	let isInGroup = false;
 	let skippedLast = false;
-	return marbles.reduce<Event<string>[]>((acc, marble, i) => {
+	return marbles.reduce<Event<A | string>[]>((acc, marble, i) => {
 		if (i !== 0 && !isInGroup && !skippedLast) {
 			frame++;
 		}
@@ -73,12 +76,21 @@ const toEvents = (marbles: string[]): Event<string>[] => {
 			}
 		}
 
-		return snoc(acc, next(frame, marble));
+		return snoc(
+			acc,
+			next(
+				frame,
+				pipe(
+					lookup(marble, values),
+					getOrElse<A | string>(() => marble),
+				),
+			),
+		);
 	}, []);
 };
 
-export const parseStream = (marbles: string): Either<Error, Event<string>[]> =>
+export const parseStream = <A>(marbles: string, values: Record<string, A>): Either<Error, Event<A | string>[]> =>
 	pipe(
 		validateStream(marbles),
-		map(toEvents),
+		map(toEvents(values)),
 	);

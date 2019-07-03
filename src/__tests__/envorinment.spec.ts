@@ -11,7 +11,7 @@ describe('environment', () => {
 			const result = '-a-b-c-|';
 			await e.run(
 				pipe(
-					fromEither(e.stream(source)),
+					fromEither(e.stream(source, {})),
 					chain(s => e.expect(s, sink).toBe(result)),
 				),
 			);
