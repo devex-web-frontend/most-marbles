@@ -94,3 +94,9 @@ export const parseStream = <A>(marbles: string, values: Record<string, A>): Eith
 		validateStream(marbles),
 		map(toEvents(values)),
 	);
+
+export const fromMarbles = <A>(marbles: string, values: Record<string, A>): Either<Error, Stream<A>> =>
+	pipe(
+		parseStream(marbles, values),
+		map(newMarblesStreamSource),
+	);

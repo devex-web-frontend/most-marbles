@@ -1,6 +1,8 @@
 import { newEnvironment } from '../envorinment';
 import { pipe } from 'fp-ts/lib/pipeable';
-import { fromEither, chain } from 'fp-ts/lib/TaskEither';
+import * as TE from 'fp-ts/lib/TaskEither';
+import { unsafeRun } from '../utils';
+import { fromMarbles } from '../marbles-stream';
 
 describe('environment', () => {
 	describe('newEnvironment', () => {
@@ -9,10 +11,10 @@ describe('environment', () => {
 			const source = '-a-b-c-|';
 			const sink = '  ^------!';
 			const result = '-a-b-c-|';
-			await e.run(
+			await unsafeRun(
 				pipe(
-					fromEither(e.stream(source, {})),
-					chain(s => e.expect(s, sink).toBe(result)),
+					TE.fromEither(fromMarbles(source, {})),
+					TE.chain(s => e.expect(s, sink).toBe(result, {})),
 				),
 			);
 		});
