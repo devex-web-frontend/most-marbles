@@ -25,6 +25,9 @@
   },
   "jest": {
     "preset": "ts-jest",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "testPathIgnorePatterns": [
+      "__tests__/setup.ts"
+    ]
   }
 }

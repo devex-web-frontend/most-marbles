@@ -1,84 +1,91 @@
-import { Delay, Time, Timer } from '@most/types';
+/**
+ * based on https://github.com/mostjs/core/blob/master/packages/core/test/helper/VirtualTimer.js
+ */
+import { Timer } from '@most/types';
 
-const handle = Symbol('VirtualTimer Handle');
-type Handle = typeof handle;
-type Thunk = () => Handle;
+class VirtualTimer implements Timer {
+	private _now: number = 0;
+	private _targetNow: number = 0;
+	private _time = Infinity;
+	private _task?: Function;
+	private _timer?: number;
+	private _active = false;
+	private _running = false;
+	private _key = {};
 
-export interface TickTimer extends Timer {
-	tick(dt: Time): void;
-}
-
-class VirtualTimer implements TickTimer {
-	private _now = 0;
-	private _targetNow = 0;
-	private time = Infinity;
-	private thunk?: Thunk;
-	private timeout?: number;
-	private isActive = false;
-	private isRunning = false;
-
-	clearTimer(timerHandle: Handle): void {
-		if (timerHandle === handle) {
-			clearTimeout(this.timeout);
-			this.timeout = undefined;
-			this.time = Infinity;
-			this.thunk = undefined;
-		}
-	}
-
-	now(): number {
+	now() {
 		return this._now;
 	}
 
-	setTimer(thunk: Thunk, delayTime: Delay): Handle {
-		if (typeof this.thunk === 'undefined') {
-			this.thunk = thunk;
-			this.time = this._now + Math.max(0, delayTime);
-			if (this.isActive) {
-				this.run();
-			}
+	setTimer(f: Function, dt: number) {
+		if (this._task !== void 0) {
+			throw new Error('VirtualTimer: Only supports one in-flight timer');
 		}
-		return handle;
-	}
 
-	tick(dt: Time): void {
-		if (dt > 0) {
-			this._targetNow += dt;
-			this.run();
+		this._task = f;
+		this._time = this._now + Math.max(0, dt);
+		if (this._active) {
+			this._run();
 		}
+		return this._key;
 	}
 
-	private run() {
-		if (!this.isRunning) {
-			this.isActive = true;
-			this.isRunning = true;
-			this.step();
-		}
-	}
-
-	private step() {
-		this.timeout = setTimeout(this.stepTimer, 0);
-	}
-
-	private stepTimer = () => {
-		if (this._now >= this._targetNow) {
-			this._now = this._targetNow;
-			this.time = Infinity;
-			this.isRunning = false;
+	clearTimer(t: {}) {
+		if (t !== this._key) {
 			return;
 		}
 
-		const thunk = this.thunk;
-		this.thunk = undefined;
-		this._now = this.time;
-		this.time = Infinity;
+		this._cancel();
+		this._time = Infinity;
+		this._task = void 0;
+	}
 
-		if (typeof thunk === 'function') {
-			thunk();
+	tick(dt: number) {
+		if (dt <= 0) {
+			return;
 		}
 
-		this.step();
+		this._targetNow = this._targetNow + dt;
+		this._run();
+	}
+
+	private _run() {
+		if (this._running) {
+			return;
+		}
+
+		this._active = true;
+		this._running = true;
+		this._step();
+	}
+
+	private _step() {
+		this._timer = setTimeout(this.stepTimer, 0, this);
+	}
+
+	private _cancel() {
+		clearTimeout(this._timer);
+	}
+
+	private stepTimer = function stepTimer(vt: VirtualTimer) {
+		if (vt._now >= vt._targetNow) {
+			vt._now = vt._targetNow;
+			vt._time = Infinity;
+			vt._running = false;
+			return;
+		}
+
+		const task = vt._task;
+		vt._task = void 0;
+		vt._now = vt._time;
+		vt._time = Infinity;
+
+		if (typeof task === 'function') {
+			task();
+		}
+
+		vt._step();
 	};
 }
 
-export const newVirtualTimer = (): TickTimer => new VirtualTimer();
+export const newVirtualTimer = () => new VirtualTimer();
