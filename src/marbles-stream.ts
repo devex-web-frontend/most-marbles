@@ -89,11 +89,61 @@ const toEvents = <A>(values: Record<string, A>) => (marbles: string[]): Event<A 
 	}, []);
 };
 
-export const parseStream = <A>(marbles: string, values: Record<string, A>): Either<Error, Event<A | string>[]> =>
-	pipe(
-		validateStream(marbles),
-		map(toEvents(values)),
-	);
+export const parseStream = <A>(marbles: string, values: Record<string, A>): Either<Error, Event<A | string>[]> => {
+	let frame = 0;
+	let isInGroup = false;
+	const result: Event<A | string>[] = [];
+	for (const marble of marbles) {
+		switch (marble) {
+			case ' ': {
+				break;
+			}
+			case '(': {
+				isInGroup = true;
+				break;
+			}
+			case ')': {
+				isInGroup = false;
+				frame++;
+				break;
+			}
+			case '#': {
+				result.push(failure(frame, new Error('Stream error')));
+				return right(result);
+			}
+			case '|': {
+				result.push(end(frame));
+				return right(result);
+			}
+			case '-': {
+				if (isInGroup) {
+					return left(new Error('Time frames are not supported in a group'));
+				}
+				frame++;
+				break;
+			}
+			default: {
+				result.push(
+					next(
+						frame,
+						pipe(
+							lookup(marble, values),
+							getOrElse<A | string>(() => marble),
+						),
+					),
+				);
+				if (!isInGroup) {
+					frame++;
+				}
+				break;
+			}
+		}
+	}
+	if (!result.some(event => event._tag === 'End')) {
+		return left(new Error('Infinite streams are not supported'));
+	}
+	return right(result);
+};
 
 export const fromMarbles = <A>(marbles: string, values: Record<string, A>): Either<Error, Stream<A>> =>
 	pipe(

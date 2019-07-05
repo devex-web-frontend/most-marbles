@@ -23,5 +23,9 @@ describe('marbles', () => {
 		it('should support time', () => {
 			expect(parseStream('-1-2-|', {})).toEqual(right([next(1, '1'), next(3, '2'), end(5)]));
 		});
+		it('should support groups', () => {
+			expect(parseStream('(abc)|', {})).toEqual(right([next(0, 'a'), next(0, 'b'), next(0, 'c'), end(1)]));
+			expect(parseStream('(a|)', {})).toEqual(right([next(0, 'a'), end(0)]));
+		});
 	});
 });
