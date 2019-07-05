@@ -89,6 +89,14 @@ class Environment {
 	collect<A>(stream: Stream<A>): TaskEither<Error, Event<A>[]> {
 		return rightTask(collect(stream, this.scheduler));
 	}
+
+	fromMarbles<A>(marbles: string, values: Record<string, A>): TaskEither<Error, Stream<A>> {
+		return taskEither.fromEither(fromMarbles(marbles, values));
+	}
+
+	fromStream<A>(stream: Stream<A>): TaskEither<Error, Stream<A>> {
+		return taskEither.taskEither.of(stream);
+	}
 }
 
 const collect = <A>(stream: Stream<A>, scheduler: Scheduler): Task<Event<A>[]> => () =>
